@@ -24,8 +24,23 @@ if ENV_FILE.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip().strip("'\""))
 
-EMAIL    = os.getenv("TRAINS_EMAIL", "")
-PASSWORD = os.getenv("TRAINS_PASSWORD", "")
+def get_credentials():
+    """Haal inloggegevens op uit environment of .env."""
+    return os.getenv("TRAINS_EMAIL", ""), os.getenv("TRAINS_PASSWORD", "")
+
+
+def set_credentials(email: str, pwd: str = ""):
+    """Sla inloggegevens veilig op in lokaal .env bestand."""
+    if email:
+        os.environ["TRAINS_EMAIL"] = email
+    if pwd:
+        os.environ["TRAINS_PASSWORD"] = pwd
+
+    cur_email = os.getenv("TRAINS_EMAIL", "")
+    cur_pwd = os.getenv("TRAINS_PASSWORD", "")
+    ENV_FILE.write_text(f"TRAINS_EMAIL={cur_email}\nTRAINS_PASSWORD={cur_pwd}\n")
+
+
 DEFAULT_DL_DIR = Path(__file__).parent / "downloads"
 CONFIG_FILE    = Path(__file__).parent / "config.json"
 
@@ -97,7 +112,8 @@ def run_downloads(brand, year_from, year_to, selected_slugs=None, selected_numbe
         p, browser, context, page = create_browser(headless=True)
 
         log("[Login] Sessie controleren...")
-        ok = login(page, EMAIL, PASSWORD)
+        email, pwd = get_credentials()
+        ok = login(page, email, pwd)
         if not ok:
             log("❌ Login kon niet worden bevestigd!")
             return
@@ -200,15 +216,32 @@ def config_route():
     if request.method == "POST":
         data = request.json or {}
         new_dir = data.get("download_dir", "").strip()
+        new_email = data.get("email", "").strip()
+        new_pwd = data.get("password", "").strip()
+
+        resp = {"ok": True}
         if new_dir:
             try:
                 p = set_download_dir(new_dir)
-                return jsonify({"ok": True, "download_dir": str(p)})
+                resp["download_dir"] = str(p)
             except Exception as e:
                 return jsonify({"ok": False, "error": str(e)}), 400
-        return jsonify({"ok": False, "error": "Geen pad opgegeven"}), 400
 
-    return jsonify({"download_dir": str(get_download_dir())})
+        if new_email or new_pwd:
+            try:
+                set_credentials(new_email, new_pwd)
+                resp["email"] = os.getenv("TRAINS_EMAIL", "")
+            except Exception as e:
+                return jsonify({"ok": False, "error": str(e)}), 400
+
+        return jsonify(resp)
+
+    email, pwd = get_credentials()
+    return jsonify({
+        "download_dir": str(get_download_dir()),
+        "email": email,
+        "has_password": bool(pwd)
+    })
 
 
 @app.route("/api/start", methods=["POST"])

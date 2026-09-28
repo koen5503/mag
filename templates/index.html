@@ -86,6 +86,19 @@
       </div>
       <div id="dirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads</div>
 
+      <!-- Inloggegevens -->
+      <details style="margin-top:14px; background:#17192b; border:1px solid #2c3252; border-radius:8px; padding:10px 14px;">
+        <summary style="cursor:pointer; font-size:0.85rem; color:#bbb; font-weight:600;">
+          🔑 Trains.com Inloggegevens
+        </summary>
+        <label style="margin-top:10px;">E-mailadres</label>
+        <input type="email" id="trains_email" placeholder="koen@huizermail.nl" style="font-size:0.85rem;">
+        <label style="margin-top:8px;">Wachtwoord</label>
+        <input type="password" id="trains_password" placeholder="Laat leeg om huidig te behouden" style="font-size:0.85rem;">
+        <button class="btn-fetch" style="margin-top:10px;" onclick="saveCredentials()">Gegevens opslaan</button>
+        <div id="credHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Veilig lokaal opgeslagen in .env</div>
+      </details>
+
       <label>Modus</label>
       <div class="mode-tabs">
         <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar (met nummers)</div>
@@ -222,7 +235,39 @@ async function loadConfig() {
       document.getElementById('download_dir').value = data.download_dir;
       document.getElementById('dirHint').textContent = 'Huidige map: ' + data.download_dir;
     }
+    if (data.email) {
+      document.getElementById('trains_email').value = data.email;
+      const hint = document.getElementById('credHint');
+      hint.textContent = data.has_password ? `✅ Ingelogd als ${data.email}` : 'Vul wachtwoord in';
+      hint.style.color = data.has_password ? '#2ecc71' : '#aaa';
+    }
   } catch(e) {}
+}
+
+async function saveCredentials() {
+  const email = document.getElementById('trains_email').value.trim();
+  const password = document.getElementById('trains_password').value;
+  const hint = document.getElementById('credHint');
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      hint.textContent = '✅ Inloggegevens veilig opgeslagen in .env!';
+      hint.style.color = '#2ecc71';
+      document.getElementById('trains_password').value = '';
+      setTimeout(() => {
+        hint.textContent = `✅ Ingelogd als ${data.email || email}`;
+      }, 3500);
+    } else {
+      alert('Fout: ' + (data.error || 'Kon gegevens niet opslaan'));
+    }
+  } catch(e) {
+    alert('Fout: ' + e.message);
+  }
 }
 
 async function saveDownloadDir() {
