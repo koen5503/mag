@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Downloads & PDFs
+downloads/
+*.pdf
+*.pdf.part
+
+# Session & Config met persoonlijke gegevens
+session_cookies.json
+config.json
+
+# Screenshots & Logs
+*.png
+*.log
+
+# Test scripts
+test_*.py
+
+# OS & IDE
+.DS_Store
+.vscode/
+.idea/
+.gemini/

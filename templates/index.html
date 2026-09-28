@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trains.com Magazine Downloader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #121420; color: #e0e0e0; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #b71c1c, #d32f2f); padding: 18px 28px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .header h1 { font-size: 1.5rem; font-weight: 700; color: white; }
+  .header .icon { font-size: 2rem; }
+  .container { max-width: 1160px; margin: 0 auto; padding: 26px 18px; display: grid; grid-template-columns: 420px 1fr; gap: 24px; }
+  .card { background: #1b1e32; border-radius: 12px; padding: 22px; border: 1px solid #282c47; box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
+  .card h2 { font-size: 1.05rem; font-weight: 600; color: #ef5350; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px; margin-top: 14px; }
+  select, input[type=number] { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #e0e0e0; font-size: 0.95rem; outline: none; }
+  select:focus, input:focus { border-color: #ef5350; }
+  
+  .mode-tabs { display: flex; gap: 8px; margin-top: 12px; margin-bottom: 14px; }
+  .tab-btn { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #2c3252; background: #242944; color: #bbb; font-size: 0.82rem; cursor: pointer; text-align: center; }
+  .tab-btn.active { background: #d32f2f; border-color: #d32f2f; color: white; font-weight: 600; }
+
+  .issues-container { margin-top: 14px; border: 1px solid #2c3252; border-radius: 8px; background: #17192b; padding: 12px; max-height: 250px; overflow-y: auto; }
+  .issues-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.8rem; color: #888; }
+  .issues-actions a { color: #ef5350; text-decoration: none; margin-left: 8px; font-size: 0.75rem; cursor: pointer; }
+  .issues-actions a:hover { text-decoration: underline; }
+  .issue-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 5px; font-size: 0.85rem; border-bottom: 1px solid #1f233b; }
+  .issue-item:last-child { border-bottom: none; }
+  .issue-item input[type=checkbox] { accent-color: #d32f2f; width: 16px; height: 16px; cursor: pointer; }
+  .issue-num { font-weight: 700; color: #ef5350; width: 28px; }
+  .issue-name { flex: 1; color: #ddd; word-break: break-word; }
+
+  .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 18px; transition: all 0.2s; }
+  .btn-start { background: #d32f2f; color: white; }
+  .btn-start:hover { background: #b71c1c; }
+  .btn-start:disabled { background: #444; cursor: not-allowed; }
+  .btn-fetch { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #3d4570; background: #2c3252; color: #ddd; font-size: 0.85rem; cursor: pointer; margin-top: 8px; }
+  .btn-fetch:hover { background: #3d4570; }
+
+  .status-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; background: #242944; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
+  .dot.running { background: #2ecc71; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .log-box { background: #0c0e18; border-radius: 8px; padding: 14px; height: 320px; overflow-y: auto; font-family: 'SF Mono', monospace; font-size: 0.8rem; line-height: 1.6; border: 1px solid #282c47; }
+  .log-box .ok { color: #2ecc71; }
+  .log-box .err { color: #ef5350; }
+  .log-box .info { color: #42a5f5; }
+  .files-list { margin-top: 14px; max-height: 250px; overflow-y: auto; }
+  .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; background: #242944; margin-bottom: 6px; }
+  .file-name { font-size: 0.83rem; color: #e0e0e0; }
+  .file-size { font-size: 0.73rem; color: #888; }
+  .file-dl { color: #ef5350; text-decoration: none; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 5px; border: 1px solid #ef5350; }
+  .file-dl:hover { background: #ef5350; color: white; }
+  .stats { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat { flex: 1; background: #242944; border-radius: 8px; padding: 10px; text-align: center; }
+  .stat-num { font-size: 1.6rem; font-weight: 700; color: #ef5350; }
+  .stat-lbl { font-size: 0.75rem; color: #888; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="icon">🚂</span>
+  <h1>Trains.com Magazine Downloader</h1>
+</div>
+<div class="container">
+  <!-- Linker paneel: configuratie -->
+  <div>
+    <div class="card">
+      <h2>⚙️ Download instellingen</h2>
+
+      <label>Tijdschrift</label>
+      <select id="brand" onchange="onBrandOrYearChange()">
+        <option value="trn">Trains (trn)</option>
+        <option value="mrr">Model Railroader (mrr)</option>
+        <option value="ctr">Classic Trains (ctr)</option>
+        <option value="ctt">Classic Toy Trains (ctt)</option>
+        <option value="grw">Garden Railways (grw)</option>
+        <option value="fsm">Finescale Modeler (fsm)</option>
+      </select>
+
+      <label>📁 Lokale downloadmap</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="download_dir" placeholder="Bijv. /Users/koen/Downloads/Magazines" style="font-size:0.85rem;">
+        <button class="btn-fetch" style="width:auto; margin:0; white-space:nowrap; padding:0 14px;" onclick="saveDownloadDir()">Opslaan</button>
+      </div>
+      <div id="dirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads</div>
+
+      <label>Modus</label>
+      <div class="mode-tabs">
+        <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar (met nummers)</div>
+        <div class="tab-btn" id="tabMulti" onclick="setMode('multi')">Reeks jaren</div>
+      </div>
+
+      <!-- Enkel jaar modus -->
+      <div id="singleYearSection">
+        <label>Jaar</label>
+        <input type="number" id="single_year" value="2020" min="1930" max="2026" onchange="onBrandOrYearChange()">
+        <button class="btn-fetch" id="btnFetch" onclick="fetchIssuesForYear()">🔍 Nummers van dit jaar controleren</button>
+
+        <div class="issues-container" id="issuesBox">
+          <div class="issues-header">
+            <span id="issuesCount">Klik 'controleren' of wissel jaar</span>
+            <span class="issues-actions">
+              <a onclick="selectAll(true)">Alles</a> |
+              <a onclick="selectAll(false)">Geen</a>
+            </span>
+          </div>
+          <div id="issuesList" style="color:#777; font-size:0.8rem; text-align:center; padding:20px 0;">
+            Kies een jaar en haal de nummers op.
+          </div>
+        </div>
+      </div>
+
+      <!-- Meerdere jaren modus -->
+      <div id="multiYearSection" style="display:none;">
+        <label>Jaar van</label>
+        <input type="number" id="year_from" value="2018" min="1930" max="2026">
+        <label>Jaar tot</label>
+        <input type="number" id="year_to" value="2020" min="1930" max="2026">
+        <div style="font-size:0.78rem; color:#888; margin-top:8px;">
+          Het script controleert voor elk jaar automatisch hoeveel nummers er bestaan en downloadt ze allemaal.
+        </div>
+      </div>
+
+      <button class="btn btn-start" id="startBtn" onclick="startDownload()">▶ Start Download</button>
+    </div>
+  </div>
+
+  <!-- Rechter paneel: status & files -->
+  <div>
+    <div class="card" style="margin-bottom:20px">
+      <h2>📊 Voortgang</h2>
+      <div class="status-bar">
+        <div class="dot" id="dot"></div>
+        <span id="statusText">Gereed</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-num" id="doneCount">0</div><div class="stat-lbl">Gedownload</div></div>
+        <div class="stat"><div class="stat-num" id="errCount">0</div><div class="stat-lbl">Fouten</div></div>
+      </div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>📁 Gedownloade bestanden</h2>
+      <div class="files-list" id="filesList">
+        <div style="color:#666;font-size:0.85rem">Laden...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentMode = 'single';
+let loadedIssues = [];
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('tabSingle').classList.toggle('active', mode === 'single');
+  document.getElementById('tabMulti').classList.toggle('active', mode === 'multi');
+  document.getElementById('singleYearSection').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('multiYearSection').style.display = mode === 'multi' ? 'block' : 'none';
+}
+
+function onBrandOrYearChange() {
+  if (currentMode === 'single') {
+    fetchIssuesForYear();
+  }
+}
+
+async function fetchIssuesForYear() {
+  const brand = document.getElementById('brand').value;
+  const year = document.getElementById('single_year').value;
+  const countEl = document.getElementById('issuesCount');
+  const listEl = document.getElementById('issuesList');
+  const fetchBtn = document.getElementById('btnFetch');
+
+  fetchBtn.disabled = true;
+  countEl.textContent = 'Zoeken op Trains.com...';
+  listEl.innerHTML = '<div style="color:#aaa; font-size:0.8rem; text-align:center; padding:15px;">Nummers ophalen...</div>';
+
+  try {
+    const res = await fetch(`/api/issues?brand=${brand}&year=${year}`);
+    const data = await res.json();
+    fetchBtn.disabled = false;
+
+    if (!data.ok || !data.issues || data.issues.length === 0) {
+      countEl.textContent = '0 nummers gevonden';
+      listEl.innerHTML = '<div style="color:#e57373; font-size:0.8rem; text-align:center; padding:15px;">Geen nummers gevonden in het archief voor dit jaar.</div>';
+      loadedIssues = [];
+      return;
+    }
+
+    loadedIssues = data.issues;
+    countEl.textContent = `${loadedIssues.length} nummers gevonden`;
+
+    listEl.innerHTML = loadedIssues.map(issue => `
+      <div class="issue-item">
+        <input type="checkbox" class="issue-cb" value="${issue.slug}" data-num="${issue.number}" checked>
+        <span class="issue-num">#${issue.number}</span>
+        <span class="issue-name">${issue.title}</span>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    fetchBtn.disabled = false;
+    countEl.textContent = 'Fout bij ophalen';
+    listEl.innerHTML = `<div style="color:#ef5350; font-size:0.8rem; text-align:center; padding:15px;">Fout: ${e.message}</div>`;
+  }
+}
+
+function selectAll(val) {
+  document.querySelectorAll('.issue-cb').forEach(cb => cb.checked = val);
+}
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+    if (data.download_dir) {
+      document.getElementById('download_dir').value = data.download_dir;
+      document.getElementById('dirHint').textContent = 'Huidige map: ' + data.download_dir;
+    }
+  } catch(e) {}
+}
+
+async function saveDownloadDir() {
+  let dir = document.getElementById('download_dir').value.trim().replace(/^['"]+|['"]+$/g, '').trim();
+  document.getElementById('download_dir').value = dir;
+  const hint = document.getElementById('dirHint');
+  if (!dir) {
+    alert('Vul een geldig pad in.');
+    return;
+  }
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({download_dir: dir})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      hint.textContent = '✅ Opgeslagen: ' + data.download_dir;
+      hint.style.color = '#2ecc71';
+      setTimeout(() => {
+        hint.textContent = 'Huidige map: ' + data.download_dir;
+        hint.style.color = '#888';
+      }, 3500);
+    } else {
+      alert('Fout: ' + (data.error || 'Kon map niet instellen'));
+    }
+  } catch(e) {
+    alert('Fout bij opslaan: ' + e.message);
+  }
+}
+
+async function startDownload() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+
+  const brand = document.getElementById('brand').value;
+  const customDir = document.getElementById('download_dir').value.trim();
+  let payload = {
+    brand: brand,
+    download_dir: customDir
+  };
+
+  if (currentMode === 'single') {
+    const yr = parseInt(document.getElementById('single_year').value);
+    payload.year_from = yr;
+    payload.year_to = yr;
+
+    // Verzamel geselecteerde nummers/slugs
+    const selectedSlugs = Array.from(document.querySelectorAll('.issue-cb:checked')).map(cb => cb.value);
+    if (selectedSlugs.length === 0 && loadedIssues.length > 0) {
+      alert('Selecteer minstens één nummer om te downloaden.');
+      btn.disabled = false;
+      return;
+    }
+    payload.slugs = selectedSlugs;
+  } else {
+    payload.year_from = parseInt(document.getElementById('year_from').value);
+    payload.year_to = parseInt(document.getElementById('year_to').value);
+  }
+
+  try {
+    const resp = await fetch('/api/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      alert(data.msg);
+      btn.disabled = false;
+    }
+  } catch(e) {
+    alert('Fout bij starten: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+function colorLine(line) {
+  if (line.includes('✅') || line.includes('Voltooid')) return `<span class="ok">${line}</span>`;
+  if (line.includes('❌') || line.includes('Fout') || line.includes('mislukt')) return `<span class="err">${line}</span>`;
+  if (line.includes('⬇️') || line.includes('📅') || line.includes('🎉') || line.includes('⏭️')) return `<span class="info">${line}</span>`;
+  return line;
+}
+
+let lastLogLen = 0;
+async function poll() {
+  try {
+    const resp = await fetch('/api/status');
+    const data = await resp.json();
+
+    const dot = document.getElementById('dot');
+    dot.className = 'dot' + (data.running ? ' running' : '');
+    document.getElementById('statusText').textContent = data.running ? 'Bezig met downloaden...' : 'Gereed';
+    document.getElementById('startBtn').disabled = data.running;
+    document.getElementById('doneCount').textContent = data.done.length;
+    document.getElementById('errCount').textContent = data.errors.length;
+
+    if (data.log.length !== lastLogLen) {
+      lastLogLen = data.log.length;
+      const box = document.getElementById('logBox');
+      box.innerHTML = data.log.map(colorLine).join('<br>');
+      box.scrollTop = box.scrollHeight;
+    }
+  } catch(e) {}
+
+  try {
+    const resp2 = await fetch('/api/files');
+    const files = await resp2.json();
+    const list = document.getElementById('filesList');
+    if (files.length === 0) {
+      list.innerHTML = '<div style="color:#666;font-size:0.85rem">Nog geen bestanden gedownload.</div>';
+    } else {
+      list.innerHTML = files.map(f => `
+        <div class="file-item">
+          <div>
+            <div class="file-name">${f.name}</div>
+            <div class="file-size">${f.size_mb} MB · ${f.rel}</div>
+          </div>
+          <a href="/api/download/${f.rel}" class="file-dl" download>⬇ Download</a>
+        </div>
+      `).join('');
+    }
+  } catch(e) {}
+
+  setTimeout(poll, 2000);
+}
+
+loadConfig();
+poll();
+fetchIssuesForYear();
+</script>
+</body>
+</html>
