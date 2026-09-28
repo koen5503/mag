@@ -3,23 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trains.com Magazine Downloader</title>
+<title>Magazine Downloader</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #121420; color: #e0e0e0; min-height: 100vh; }
-  .header { background: linear-gradient(135deg, #b71c1c, #d32f2f); padding: 18px 28px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .header { background: linear-gradient(135deg, #b71c1c, #d32f2f); padding: 18px 28px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: background 0.3s; }
+  .header.elektor { background: linear-gradient(135deg, #1565c0, #1976d2); }
   .header h1 { font-size: 1.5rem; font-weight: 700; color: white; }
   .header .icon { font-size: 2rem; }
-  .container { max-width: 1160px; margin: 0 auto; padding: 26px 18px; display: grid; grid-template-columns: 420px 1fr; gap: 24px; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 26px 18px; display: grid; grid-template-columns: 440px 1fr; gap: 24px; }
   .card { background: #1b1e32; border-radius: 12px; padding: 22px; border: 1px solid #282c47; box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
   .card h2 { font-size: 1.05rem; font-weight: 600; color: #ef5350; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2.elektor-title { color: #64b5f6; }
   label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px; margin-top: 14px; }
-  select, input[type=number] { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #e0e0e0; font-size: 0.95rem; outline: none; }
+  select, input[type=text], input[type=email], input[type=password], input[type=number] { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #e0e0e0; font-size: 0.95rem; outline: none; }
   select:focus, input:focus { border-color: #ef5350; }
   
-  .mode-tabs { display: flex; gap: 8px; margin-top: 12px; margin-bottom: 14px; }
-  .tab-btn { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #2c3252; background: #242944; color: #bbb; font-size: 0.82rem; cursor: pointer; text-align: center; }
-  .tab-btn.active { background: #d32f2f; border-color: #d32f2f; color: white; font-weight: 600; }
+  .mode-tabs { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 14px; }
+  .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #bbb; font-size: 0.86rem; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .tab-btn.active { background: #d32f2f; border-color: #d32f2f; color: white; font-weight: 700; }
+  .tab-btn.active-elektor { background: #1976d2; border-color: #1976d2; color: white; font-weight: 700; }
 
   .issues-container { margin-top: 14px; border: 1px solid #2c3252; border-radius: 8px; background: #17192b; padding: 12px; max-height: 250px; overflow-y: auto; }
   .issues-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.8rem; color: #888; }
@@ -35,6 +38,8 @@
   .btn-start { background: #d32f2f; color: white; }
   .btn-start:hover { background: #b71c1c; }
   .btn-start:disabled { background: #444; cursor: not-allowed; }
+  .btn-blue { background: #1976d2; color: white; }
+  .btn-blue:hover { background: #1565c0; }
   .btn-fetch { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #3d4570; background: #2c3252; color: #ddd; font-size: 0.85rem; cursor: pointer; margin-top: 8px; }
   .btn-fetch:hover { background: #3d4570; }
 
@@ -56,87 +61,177 @@
   .stat { flex: 1; background: #242944; border-radius: 8px; padding: 10px; text-align: center; }
   .stat-num { font-size: 1.6rem; font-weight: 700; color: #ef5350; }
   .stat-lbl { font-size: 0.75rem; color: #888; margin-top: 2px; }
+
+  .screenshot-box { margin-top: 14px; padding: 10px; border-radius: 8px; background: #17192b; border: 1px solid #2c3252; text-align: center; }
+  .screenshot-box img { max-width: 100%; border-radius: 6px; border: 1px solid #3d4570; margin-top: 8px; }
 </style>
 </head>
 <body>
-<div class="header">
-  <span class="icon">🚂</span>
-  <h1>Trains.com Magazine Downloader</h1>
+<div class="header" id="mainHeader">
+  <span class="icon" id="mainIcon">🚂</span>
+  <h1 id="mainTitle">Trains.com Magazine Downloader</h1>
 </div>
+
 <div class="container">
   <!-- Linker paneel: configuratie -->
   <div>
     <div class="card">
-      <h2>⚙️ Download instellingen</h2>
-
-      <label>Tijdschrift</label>
-      <select id="brand" onchange="onBrandOrYearChange()">
-        <option value="trn">Trains (trn)</option>
-        <option value="mrr">Model Railroader (mrr)</option>
-        <option value="ctr">Classic Trains (ctr)</option>
-        <option value="ctt">Classic Toy Trains (ctt)</option>
-        <option value="grw">Garden Railways (grw)</option>
-        <option value="fsm">Finescale Modeler (fsm)</option>
-      </select>
-
-      <label>📁 Lokale downloadmap</label>
-      <div style="display:flex; gap:8px;">
-        <input type="text" id="download_dir" placeholder="Bijv. /Users/koen/Downloads/Magazines" style="font-size:0.85rem;">
-        <button class="btn-fetch" style="width:auto; margin:0; white-space:nowrap; padding:0 14px;" onclick="saveDownloadDir()">Opslaan</button>
-      </div>
-      <div id="dirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads</div>
-
-      <!-- Inloggegevens -->
-      <details style="margin-top:14px; background:#17192b; border:1px solid #2c3252; border-radius:8px; padding:10px 14px;">
-        <summary style="cursor:pointer; font-size:0.85rem; color:#bbb; font-weight:600;">
-          🔑 Trains.com Inloggegevens
-        </summary>
-        <label style="margin-top:10px;">E-mailadres</label>
-        <input type="email" id="trains_email" placeholder="koen@huizermail.nl" style="font-size:0.85rem;">
-        <label style="margin-top:8px;">Wachtwoord</label>
-        <input type="password" id="trains_password" placeholder="Laat leeg om huidig te behouden" style="font-size:0.85rem;">
-        <button class="btn-fetch" style="margin-top:10px;" onclick="saveCredentials()">Gegevens opslaan</button>
-        <div id="credHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Veilig lokaal opgeslagen in .env</div>
-      </details>
-
-      <label>Modus</label>
+      <label style="margin-top:0; font-weight:700; color:#fff;">Selecteer Website</label>
       <div class="mode-tabs">
-        <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar (met nummers)</div>
-        <div class="tab-btn" id="tabMulti" onclick="setMode('multi')">Reeks jaren</div>
+        <div class="tab-btn active" id="tabSiteTrains" onclick="switchSite('trains')">🚂 Trains.com</div>
+        <div class="tab-btn" id="tabSiteElektor" onclick="switchSite('elektor')">⚡ Elektor Magazine</div>
       </div>
 
-      <!-- Enkel jaar modus -->
-      <div id="singleYearSection">
-        <label>Jaar</label>
-        <input type="number" id="single_year" value="2020" min="1930" max="2026" onchange="onBrandOrYearChange()">
-        <button class="btn-fetch" id="btnFetch" onclick="fetchIssuesForYear()">🔍 Nummers van dit jaar controleren</button>
+      <!-- ==================== SECTIE: TRAINS.COM ==================== -->
+      <div id="sectionTrains">
+        <h2>⚙️ Trains.com Instellingen</h2>
 
-        <div class="issues-container" id="issuesBox">
-          <div class="issues-header">
-            <span id="issuesCount">Klik 'controleren' of wissel jaar</span>
-            <span class="issues-actions">
-              <a onclick="selectAll(true)">Alles</a> |
-              <a onclick="selectAll(false)">Geen</a>
-            </span>
-          </div>
-          <div id="issuesList" style="color:#777; font-size:0.8rem; text-align:center; padding:20px 0;">
-            Kies een jaar en haal de nummers op.
+        <label>Tijdschrift</label>
+        <select id="brand" onchange="onBrandOrYearChange()">
+          <option value="trn">Trains (trn)</option>
+          <option value="mrr">Model Railroader (mrr)</option>
+          <option value="ctr">Classic Trains (ctr)</option>
+          <option value="ctt">Classic Toy Trains (ctt)</option>
+          <option value="grw">Garden Railways (grw)</option>
+          <option value="fsm">Finescale Modeler (fsm)</option>
+        </select>
+
+        <label>📁 Lokale downloadmap (Trains)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="download_dir" placeholder="Bijv. /Users/koen/.../Trains" style="font-size:0.85rem;">
+          <button class="btn-fetch" style="width:auto; margin:0; white-space:nowrap; padding:0 14px;" onclick="saveDownloadDir('trains')">Opslaan</button>
+        </div>
+        <div id="dirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads</div>
+
+        <!-- Inloggegevens Trains -->
+        <details style="margin-top:14px; background:#17192b; border:1px solid #2c3252; border-radius:8px; padding:10px 14px;">
+          <summary style="cursor:pointer; font-size:0.85rem; color:#bbb; font-weight:600;">
+            🔑 Trains.com Inloggegevens
+          </summary>
+          <label style="margin-top:10px;">E-mailadres</label>
+          <input type="email" id="trains_email" placeholder="koen@huizermail.nl" style="font-size:0.85rem;">
+          <label style="margin-top:8px;">Wachtwoord</label>
+          <input type="password" id="trains_password" placeholder="Laat leeg om huidig te behouden" style="font-size:0.85rem;">
+          <button class="btn-fetch" style="margin-top:10px;" onclick="saveCredentials('trains')">Gegevens opslaan</button>
+          <div id="credHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Veilig lokaal opgeslagen in .env</div>
+        </details>
+
+        <label>Modus</label>
+        <div class="mode-tabs">
+          <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar (met nummers)</div>
+          <div class="tab-btn" id="tabMulti" onclick="setMode('multi')">Reeks jaren</div>
+        </div>
+
+        <div id="singleYearSection">
+          <label>Jaar</label>
+          <input type="number" id="single_year" value="2020" min="1930" max="2026" onchange="onBrandOrYearChange()">
+          <button class="btn-fetch" id="btnFetch" onclick="fetchIssuesForYear()">🔍 Nummers van dit jaar controleren</button>
+
+          <div class="issues-container" id="issuesBox">
+            <div class="issues-header">
+              <span id="issuesCount">Klik 'controleren' of wissel jaar</span>
+              <span class="issues-actions">
+                <a onclick="selectAll(true)">Alles</a> |
+                <a onclick="selectAll(false)">Geen</a>
+              </span>
+            </div>
+            <div id="issuesList" style="color:#777; font-size:0.8rem; text-align:center; padding:20px 0;">
+              Kies een jaar en haal de nummers op.
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Meerdere jaren modus -->
-      <div id="multiYearSection" style="display:none;">
-        <label>Jaar van</label>
-        <input type="number" id="year_from" value="2018" min="1930" max="2026">
-        <label>Jaar tot</label>
-        <input type="number" id="year_to" value="2020" min="1930" max="2026">
-        <div style="font-size:0.78rem; color:#888; margin-top:8px;">
-          Het script controleert voor elk jaar automatisch hoeveel nummers er bestaan en downloadt ze allemaal.
+        <div id="multiYearSection" style="display:none;">
+          <label>Jaar van</label>
+          <input type="number" id="year_from" value="2018" min="1930" max="2026">
+          <label>Jaar tot</label>
+          <input type="number" id="year_to" value="2020" min="1930" max="2026">
+          <div style="font-size:0.78rem; color:#888; margin-top:8px;">
+            Het script controleert voor elk jaar automatisch hoeveel nummers er bestaan en downloadt ze allemaal.
+          </div>
         </div>
+
+        <button class="btn btn-start" id="startBtn" onclick="startDownload()">▶ Start Download</button>
       </div>
 
-      <button class="btn btn-start" id="startBtn" onclick="startDownload()">▶ Start Download</button>
+      <!-- ==================== SECTIE: ELEKTOR MAGAZINE ==================== -->
+      <div id="sectionElektor" style="display:none;">
+        <h2 class="elektor-title">⚡ Elektor Magazine Instellingen</h2>
+
+        <label>📁 Lokale downloadmap (Elektor)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="elektor_download_dir" placeholder="Bijv. /Users/koen/.../Elektor" style="font-size:0.85rem;">
+          <button class="btn-fetch" style="width:auto; margin:0; white-space:nowrap; padding:0 14px;" onclick="saveDownloadDir('elektor')">Opslaan</button>
+        </div>
+        <div id="elektorDirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads/elektor</div>
+
+        <!-- Inloggegevens Elektor (Dropdown / Uitklapbaar) -->
+        <details style="margin-top:14px; background:#17192b; border:1px solid #2c3252; border-radius:8px; padding:12px 14px;">
+          <summary style="cursor:pointer; font-size:0.9rem; color:#64b5f6; font-weight:700;">
+            🔑 Elektor Inloggegevens
+          </summary>
+          <div style="font-size:0.78rem; color:#aaa; margin-top:6px;">
+            Vul je Elektor account in. De gegevens worden veilig lokaal bewaard in <code>.env</code>.
+          </div>
+          <label style="margin-top:10px;">E-mailadres Elektor</label>
+          <input type="email" id="elektor_email" placeholder="jouw_elektor_email@voorbeeld.com" style="font-size:0.85rem;">
+          <label style="margin-top:8px;">Wachtwoord Elektor</label>
+          <input type="password" id="elektor_password" placeholder="Wachtwoord van Elektormagazine.nl" style="font-size:0.85rem;">
+          
+          <button class="btn btn-blue" id="btnTestElektorLogin" onclick="testElektorLogin()" style="margin-top:12px;">
+            🔐 Opslaan & Inloggen Testen
+          </button>
+          
+          <div id="elektorCredStatus" style="font-size:0.85rem; font-weight:600; margin-top:10px; color:#888; text-align:center;">
+            Voer je gegevens in en klik op "Opslaan & Inloggen Testen"
+          </div>
+        </details>
+
+        <!-- Screenshot Resultaat -->
+        <div class="screenshot-box" id="elektorShotBox" style="display:none;">
+          <div style="font-size:0.8rem; color:#64b5f6; font-weight:600;" id="elektorShotTitle">📸 Resultaat na inloggen:</div>
+          <img id="elektorScreenshot" src="" alt="Login screenshot">
+        </div>
+
+        <!-- Modus Elektor -->
+        <label style="margin-top:16px;">Modus</label>
+        <div class="mode-tabs">
+          <div class="tab-btn active-elektor" id="tabElektorSingle" onclick="setElektorMode('single')">Enkel jaar (met nummers)</div>
+          <div class="tab-btn" id="tabElektorMulti" onclick="setElektorMode('multi')">Reeks jaren</div>
+        </div>
+
+        <div id="elektorSingleYearSection">
+          <label>Jaar</label>
+          <input type="number" id="elektor_single_year" value="2020" min="1960" max="2026" onchange="fetchElektorIssues()">
+          <button class="btn-fetch" id="btnElektorFetch" onclick="fetchElektorIssues()">🔍 Nummers van dit jaar controleren</button>
+
+          <div class="issues-container" id="elektorIssuesBox">
+            <div class="issues-header">
+              <span id="elektorIssuesCount">Klik 'controleren' of wissel jaar</span>
+              <span class="issues-actions">
+                <a onclick="selectAllElektor(true)" style="color:#64b5f6;">Alles</a> |
+                <a onclick="selectAllElektor(false)" style="color:#64b5f6;">Geen</a>
+              </span>
+            </div>
+            <div id="elektorIssuesList" style="color:#777; font-size:0.8rem; text-align:center; padding:20px 0;">
+              Kies een jaar en haal de nummers op.
+            </div>
+          </div>
+        </div>
+
+        <div id="elektorMultiYearSection" style="display:none;">
+          <label>Jaar van</label>
+          <input type="number" id="elektor_year_from" value="2018" min="1960" max="2026">
+          <label>Jaar tot</label>
+          <input type="number" id="elektor_year_to" value="2020" min="1960" max="2026">
+          <div style="font-size:0.78rem; color:#aaa; margin-top:8px;">
+            Het script controleert voor elk jaar automatisch hoeveel edities er bestaan in het archief en downloadt ze allemaal.
+          </div>
+        </div>
+
+        <button class="btn btn-blue" id="startElektorBtn" onclick="startElektorDownload()">▶ Start Elektor Download</button>
+      </div>
+
     </div>
   </div>
 
@@ -165,8 +260,138 @@
 </div>
 
 <script>
+let currentSite = 'trains';
 let currentMode = 'single';
 let loadedIssues = [];
+
+function switchSite(site) {
+  currentSite = site;
+  const isElektor = (site === 'elektor');
+
+  document.getElementById('tabSiteTrains').classList.toggle('active', !isElektor);
+  document.getElementById('tabSiteElektor').classList.toggle('active-elektor', isElektor);
+
+  document.getElementById('sectionTrains').style.display = isElektor ? 'none' : 'block';
+  document.getElementById('sectionElektor').style.display = isElektor ? 'block' : 'none';
+
+  const header = document.getElementById('mainHeader');
+  const title = document.getElementById('mainTitle');
+  const icon = document.getElementById('mainIcon');
+
+  if (isElektor) {
+    header.classList.add('elektor');
+    title.textContent = 'Elektor Magazine Downloader';
+    icon.textContent = '⚡';
+    if (loadedElektorIssues.length === 0) {
+      fetchElektorIssues();
+    }
+  } else {
+    header.classList.remove('elektor');
+    title.textContent = 'Trains.com Magazine Downloader';
+    icon.textContent = '🚂';
+  }
+  refreshFiles();
+}
+
+let currentElektorMode = 'single';
+let loadedElektorIssues = [];
+
+function setElektorMode(mode) {
+  currentElektorMode = mode;
+  document.getElementById('tabElektorSingle').classList.toggle('active-elektor', mode === 'single');
+  document.getElementById('tabElektorMulti').classList.toggle('active-elektor', mode === 'multi');
+  document.getElementById('elektorSingleYearSection').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('elektorMultiYearSection').style.display = mode === 'multi' ? 'block' : 'none';
+}
+
+async function fetchElektorIssues() {
+  const year = document.getElementById('elektor_single_year').value;
+  const countEl = document.getElementById('elektorIssuesCount');
+  const listEl = document.getElementById('elektorIssuesList');
+  const fetchBtn = document.getElementById('btnElektorFetch');
+
+  fetchBtn.disabled = true;
+  countEl.textContent = 'Zoeken op Elektormagazine.nl...';
+  listEl.innerHTML = '<div style="color:#aaa; font-size:0.8rem; text-align:center; padding:15px;">Nummers ophalen...</div>';
+
+  try {
+    const res = await fetch(`/api/issues?site=elektor&year=${year}`);
+    const data = await res.json();
+    fetchBtn.disabled = false;
+
+    if (!data.ok || !data.issues || data.issues.length === 0) {
+      countEl.textContent = '0 nummers gevonden';
+      listEl.innerHTML = '<div style="color:#e57373; font-size:0.8rem; text-align:center; padding:15px;">Geen nummers gevonden in het Elektor archief voor dit jaar.</div>';
+      loadedElektorIssues = [];
+      return;
+    }
+
+    loadedElektorIssues = data.issues;
+    countEl.textContent = `${loadedElektorIssues.length} nummers gevonden`;
+
+    listEl.innerHTML = loadedElektorIssues.map(issue => `
+      <div class="issue-item">
+        <input type="checkbox" class="elektor-issue-cb" value="${issue.slug}" data-num="${issue.number}" checked style="accent-color:#1976d2;">
+        <span class="issue-num" style="color:#64b5f6;">#${issue.number}</span>
+        <span class="issue-name">${issue.title}</span>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    fetchBtn.disabled = false;
+    countEl.textContent = 'Fout bij ophalen';
+    listEl.innerHTML = `<div style="color:#ef5350; font-size:0.8rem; text-align:center; padding:15px;">Fout: ${e.message}</div>`;
+  }
+}
+
+function selectAllElektor(val) {
+  document.querySelectorAll('.elektor-issue-cb').forEach(cb => cb.checked = val);
+}
+
+async function startElektorDownload() {
+  const btn = document.getElementById('startElektorBtn');
+  btn.disabled = true;
+
+  const customDir = document.getElementById('elektor_download_dir').value.trim();
+  let payload = {
+    site: 'elektor',
+    download_dir: customDir
+  };
+
+  if (currentElektorMode === 'single') {
+    const yr = parseInt(document.getElementById('elektor_single_year').value);
+    payload.year_from = yr;
+    payload.year_to = yr;
+
+    const selectedSlugs = Array.from(document.querySelectorAll('.elektor-issue-cb:checked')).map(cb => cb.value);
+    if (selectedSlugs.length === 0 && loadedElektorIssues.length > 0) {
+      alert('Selecteer minstens één Elektor nummer om te downloaden.');
+      btn.disabled = false;
+      return;
+    }
+    payload.slugs = selectedSlugs;
+  } else {
+    payload.year_from = parseInt(document.getElementById('elektor_year_from').value);
+    payload.year_to = parseInt(document.getElementById('elektor_year_to').value);
+  }
+
+  try {
+    const resp = await fetch('/api/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      alert(data.msg);
+      btn.disabled = false;
+    }
+  } catch(e) {
+    alert('Fout bij starten: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
 
 function setMode(mode) {
   currentMode = mode;
@@ -231,6 +456,8 @@ async function loadConfig() {
   try {
     const res = await fetch('/api/config');
     const data = await res.json();
+    
+    // Trains
     if (data.download_dir) {
       document.getElementById('download_dir').value = data.download_dir;
       document.getElementById('dirHint').textContent = 'Huidige map: ' + data.download_dir;
@@ -241,26 +468,91 @@ async function loadConfig() {
       hint.textContent = data.has_password ? `✅ Ingelogd als ${data.email}` : 'Vul wachtwoord in';
       hint.style.color = data.has_password ? '#2ecc71' : '#aaa';
     }
+
+    // Elektor
+    if (data.elektor_download_dir) {
+      document.getElementById('elektor_download_dir').value = data.elektor_download_dir;
+      document.getElementById('elektorDirHint').textContent = 'Huidige map: ' + data.elektor_download_dir;
+    }
+    if (data.elektor_email) {
+      document.getElementById('elektor_email').value = data.elektor_email;
+      const st = document.getElementById('elektorCredStatus');
+      st.textContent = data.has_elektor_password ? `✅ Account gereed (${data.elektor_email})` : 'Vul wachtwoord in en test login';
+      st.style.color = data.has_elektor_password ? '#2ecc71' : '#bbb';
+    }
+
   } catch(e) {}
 }
 
-async function saveCredentials() {
-  const email = document.getElementById('trains_email').value.trim();
-  const password = document.getElementById('trains_password').value;
-  const hint = document.getElementById('credHint');
+async function saveDownloadDir(site) {
+  const isElektor = (site === 'elektor');
+  const inputId = isElektor ? 'elektor_download_dir' : 'download_dir';
+  const hintId  = isElektor ? 'elektorDirHint' : 'dirHint';
+  const key     = isElektor ? 'elektor_download_dir' : 'download_dir';
+
+  let dir = document.getElementById(inputId).value.trim().replace(/^['"]+|['"]+$/g, '').trim();
+  document.getElementById(inputId).value = dir;
+  const hint = document.getElementById(hintId);
+  if (!dir) {
+    alert('Vul een geldig pad in.');
+    return;
+  }
+  try {
+    const payload = {};
+    payload[key] = dir;
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      hint.textContent = '✅ Opgeslagen: ' + (data[key] || dir);
+      hint.style.color = '#2ecc71';
+      setTimeout(() => {
+        hint.textContent = 'Huidige map: ' + (data[key] || dir);
+        hint.style.color = '#888';
+      }, 3500);
+    } else {
+      alert('Fout: ' + (data.error || 'Kon map niet instellen'));
+    }
+  } catch(e) {
+    alert('Fout bij opslaan: ' + e.message);
+  }
+}
+
+async function saveCredentials(site) {
+  const isElektor = (site === 'elektor');
+  const emailId = isElektor ? 'elektor_email' : 'trains_email';
+  const pwdId   = isElektor ? 'elektor_password' : 'trains_password';
+  const hintId  = isElektor ? 'elektorCredStatus' : 'credHint';
+
+  const email = document.getElementById(emailId).value.trim();
+  const password = document.getElementById(pwdId).value;
+  const hint = document.getElementById(hintId);
+
+  const payload = {};
+  if (isElektor) {
+    payload.elektor_email = email;
+    payload.elektor_password = password;
+  } else {
+    payload.email = email;
+    payload.password = password;
+  }
+
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, password})
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.ok) {
       hint.textContent = '✅ Inloggegevens veilig opgeslagen in .env!';
       hint.style.color = '#2ecc71';
-      document.getElementById('trains_password').value = '';
+      document.getElementById(pwdId).value = '';
       setTimeout(() => {
-        hint.textContent = `✅ Ingelogd als ${data.email || email}`;
+        hint.textContent = `✅ Ingelogd als ${email}`;
       }, 3500);
     } else {
       alert('Fout: ' + (data.error || 'Kon gegevens niet opslaan'));
@@ -270,33 +562,52 @@ async function saveCredentials() {
   }
 }
 
-async function saveDownloadDir() {
-  let dir = document.getElementById('download_dir').value.trim().replace(/^['"]+|['"]+$/g, '').trim();
-  document.getElementById('download_dir').value = dir;
-  const hint = document.getElementById('dirHint');
-  if (!dir) {
-    alert('Vul een geldig pad in.');
+async function testElektorLogin() {
+  const email = document.getElementById('elektor_email').value.trim();
+  const password = document.getElementById('elektor_password').value;
+  const btn = document.getElementById('btnTestElektorLogin');
+  const statusEl = document.getElementById('elektorCredStatus');
+  const shotBox = document.getElementById('elektorShotBox');
+  const shotImg = document.getElementById('elektorScreenshot');
+  const shotTitle = document.getElementById('elektorShotTitle');
+
+  if (!email) {
+    alert('Vul eerst je Elektor e-mailadres in.');
     return;
   }
+
+  btn.disabled = true;
+  statusEl.textContent = '⏳ Bezig met inloggen op Elektormagazine.nl...';
+  statusEl.style.color = '#64b5f6';
+
   try {
-    const res = await fetch('/api/config', {
+    const res = await fetch('/api/elektor/test_login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({download_dir: dir})
+      body: JSON.stringify({email, password})
     });
     const data = await res.json();
+    btn.disabled = false;
+
     if (data.ok) {
-      hint.textContent = '✅ Opgeslagen: ' + data.download_dir;
-      hint.style.color = '#2ecc71';
-      setTimeout(() => {
-        hint.textContent = 'Huidige map: ' + data.download_dir;
-        hint.style.color = '#888';
-      }, 3500);
+      statusEl.textContent = '✅ ' + data.msg;
+      statusEl.style.color = '#2ecc71';
+      shotTitle.textContent = '📸 Ingelogd resultaat op Elektor:';
     } else {
-      alert('Fout: ' + (data.error || 'Kon map niet instellen'));
+      statusEl.textContent = '❌ ' + data.msg;
+      statusEl.style.color = '#ef5350';
+      shotTitle.textContent = '📸 Foutpagina na inloggen:';
     }
+
+    if (data.screenshot) {
+      shotImg.src = data.screenshot;
+      shotBox.style.display = 'block';
+    }
+
   } catch(e) {
-    alert('Fout bij opslaan: ' + e.message);
+    btn.disabled = false;
+    statusEl.textContent = '❌ Fout: ' + e.message;
+    statusEl.style.color = '#ef5350';
   }
 }
 
@@ -316,7 +627,6 @@ async function startDownload() {
     payload.year_from = yr;
     payload.year_to = yr;
 
-    // Verzamel geselecteerde nummers/slugs
     const selectedSlugs = Array.from(document.querySelectorAll('.issue-cb:checked')).map(cb => cb.value);
     if (selectedSlugs.length === 0 && loadedIssues.length > 0) {
       alert('Selecteer minstens één nummer om te downloaden.');
@@ -363,6 +673,8 @@ async function poll() {
     dot.className = 'dot' + (data.running ? ' running' : '');
     document.getElementById('statusText').textContent = data.running ? 'Bezig met downloaden...' : 'Gereed';
     document.getElementById('startBtn').disabled = data.running;
+    const elektorBtn = document.getElementById('startElektorBtn');
+    if (elektorBtn) elektorBtn.disabled = data.running;
     document.getElementById('doneCount').textContent = data.done.length;
     document.getElementById('errCount').textContent = data.errors.length;
 
@@ -374,12 +686,17 @@ async function poll() {
     }
   } catch(e) {}
 
+  await refreshFiles();
+  setTimeout(poll, 2000);
+}
+
+async function refreshFiles() {
   try {
-    const resp2 = await fetch('/api/files');
+    const resp2 = await fetch(`/api/files?site=${currentSite}`);
     const files = await resp2.json();
     const list = document.getElementById('filesList');
     if (files.length === 0) {
-      list.innerHTML = '<div style="color:#666;font-size:0.85rem">Nog geen bestanden gedownload.</div>';
+      list.innerHTML = `<div style="color:#666;font-size:0.85rem">Nog geen bestanden gedownload voor ${currentSite === 'elektor' ? 'Elektor' : 'Trains.com'}.</div>`;
     } else {
       list.innerHTML = files.map(f => `
         <div class="file-item">
@@ -387,14 +704,13 @@ async function poll() {
             <div class="file-name">${f.name}</div>
             <div class="file-size">${f.size_mb} MB · ${f.rel}</div>
           </div>
-          <a href="/api/download/${f.rel}" class="file-dl" download>⬇ Download</a>
+          <a href="/api/download/${f.rel}?site=${currentSite}" class="file-dl" download>⬇ Download</a>
         </div>
       `).join('');
     }
   } catch(e) {}
-
-  setTimeout(poll, 2000);
 }
+
 
 loadConfig();
 poll();

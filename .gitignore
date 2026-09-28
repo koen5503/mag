@@ -12,6 +12,7 @@ downloads/
 
 # Session & Config met persoonlijke gegevens
 session_cookies.json
+session_elektor.json
 config.json
 
 # Screenshots & Logs
