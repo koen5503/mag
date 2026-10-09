@@ -102,6 +102,7 @@
           <option value="ctt">Classic Toy Trains (ctt)</option>
           <option value="grw">Garden Railways (grw)</option>
           <option value="fsm">Finescale Modeler (fsm)</option>
+          <option value="specials">⭐ Special Issues (archives/special-issues)</option>
         </select>
 
         <label>📁 Lokale downloadmap (Trains)</label>
@@ -126,12 +127,12 @@
 
         <label>Modus</label>
         <div class="mode-tabs">
-          <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar (met nummers)</div>
-          <div class="tab-btn" id="tabMulti" onclick="setMode('multi')">Reeks jaren</div>
+          <div class="tab-btn active" id="tabSingle" onclick="setMode('single')">Enkel jaar / pagina</div>
+          <div class="tab-btn" id="tabMulti" onclick="setMode('multi')">Reeks jaren / pagina's</div>
         </div>
 
         <div id="singleYearSection">
-          <label>Jaar</label>
+          <label id="lblYear">Jaar</label>
           <input type="number" id="single_year" value="2020" min="1930" max="2026" onchange="onBrandOrYearChange()">
           <button class="btn-fetch" id="btnFetch" onclick="fetchIssuesForYear()">🔍 Nummers van dit jaar controleren</button>
 
@@ -150,11 +151,11 @@
         </div>
 
         <div id="multiYearSection" style="display:none;">
-          <label>Jaar van</label>
+          <label id="lblYearFrom">Jaar van</label>
           <input type="number" id="year_from" value="2018" min="1930" max="2026">
-          <label>Jaar tot</label>
+          <label id="lblYearTo">Jaar tot</label>
           <input type="number" id="year_to" value="2020" min="1930" max="2026">
-          <div style="font-size:0.78rem; color:#888; margin-top:8px;">
+          <div id="multiYearHint" style="font-size:0.78rem; color:#888; margin-top:8px;">
             Het script controleert voor elk jaar automatisch hoeveel nummers er bestaan en downloadt ze allemaal.
           </div>
         </div>
@@ -591,6 +592,61 @@ function setMode(mode) {
 }
 
 function onBrandOrYearChange() {
+  const brand = document.getElementById('brand').value;
+  const isSpecials = (brand === 'specials');
+  const lblYear = document.getElementById('lblYear');
+  const singleYear = document.getElementById('single_year');
+  const btnFetch = document.getElementById('btnFetch');
+  const lblYearFrom = document.getElementById('lblYearFrom');
+  const lblYearTo = document.getElementById('lblYearTo');
+  const yearFrom = document.getElementById('year_from');
+  const yearTo = document.getElementById('year_to');
+  const multiHint = document.getElementById('multiYearHint');
+
+  if (isSpecials) {
+    if (lblYear) lblYear.textContent = 'Selectiepagina (1 t/m 8)';
+    if (btnFetch) btnFetch.textContent = '🔍 Special Issues van deze pagina controleren';
+    if (singleYear) {
+      singleYear.min = '1';
+      singleYear.max = '8';
+      if (parseInt(singleYear.value) > 8 || parseInt(singleYear.value) < 1) singleYear.value = '1';
+    }
+    if (lblYearFrom) lblYearFrom.textContent = 'Pagina van';
+    if (lblYearTo) lblYearTo.textContent = 'Pagina tot';
+    if (yearFrom) {
+      yearFrom.min = '1';
+      yearFrom.max = '8';
+      if (parseInt(yearFrom.value) > 8 || parseInt(yearFrom.value) < 1) yearFrom.value = '1';
+    }
+    if (yearTo) {
+      yearTo.min = '1';
+      yearTo.max = '8';
+      if (parseInt(yearTo.value) > 8 || parseInt(yearTo.value) < 1) yearTo.value = '8';
+    }
+    if (multiHint) multiHint.textContent = "Het script doorzoekt de geselecteerde selectiepagina's (1 t/m 8) van de Special Issues en downloadt ze allemaal.";
+  } else {
+    if (lblYear) lblYear.textContent = 'Jaar';
+    if (btnFetch) btnFetch.textContent = '🔍 Nummers van dit jaar controleren';
+    if (singleYear) {
+      singleYear.min = '1930';
+      singleYear.max = '2026';
+      if (parseInt(singleYear.value) < 1930) singleYear.value = '2020';
+    }
+    if (lblYearFrom) lblYearFrom.textContent = 'Jaar van';
+    if (lblYearTo) lblYearTo.textContent = 'Jaar tot';
+    if (yearFrom) {
+      yearFrom.min = '1930';
+      yearFrom.max = '2026';
+      if (parseInt(yearFrom.value) < 1930) yearFrom.value = '2018';
+    }
+    if (yearTo) {
+      yearTo.min = '1930';
+      yearTo.max = '2026';
+      if (parseInt(yearTo.value) < 1930) yearTo.value = '2020';
+    }
+    if (multiHint) multiHint.textContent = "Het script controleert voor elk jaar automatisch hoeveel nummers er bestaan en downloadt ze allemaal.";
+  }
+
   if (currentMode === 'single') {
     fetchIssuesForYear();
   }
@@ -598,13 +654,14 @@ function onBrandOrYearChange() {
 
 async function fetchIssuesForYear() {
   const brand = document.getElementById('brand').value;
+  const isSpecials = (brand === 'specials');
   const year = document.getElementById('single_year').value;
   const countEl = document.getElementById('issuesCount');
   const listEl = document.getElementById('issuesList');
   const fetchBtn = document.getElementById('btnFetch');
 
   fetchBtn.disabled = true;
-  countEl.textContent = 'Zoeken op Trains.com...';
+  countEl.textContent = isSpecials ? `Zoeken op Special Issues pagina ${year}...` : 'Zoeken op Trains.com...';
   listEl.innerHTML = '<div style="color:#aaa; font-size:0.8rem; text-align:center; padding:15px;">Nummers ophalen...</div>';
 
   try {
@@ -614,13 +671,13 @@ async function fetchIssuesForYear() {
 
     if (!data.ok || !data.issues || data.issues.length === 0) {
       countEl.textContent = '0 nummers gevonden';
-      listEl.innerHTML = '<div style="color:#e57373; font-size:0.8rem; text-align:center; padding:15px;">Geen nummers gevonden in het archief voor dit jaar.</div>';
+      listEl.innerHTML = `<div style="color:#e57373; font-size:0.8rem; text-align:center; padding:15px;">Geen nummers gevonden voor deze ${isSpecials ? 'pagina' : 'selectie'}.</div>`;
       loadedIssues = [];
       return;
     }
 
     loadedIssues = data.issues;
-    countEl.textContent = `${loadedIssues.length} nummers gevonden`;
+    countEl.textContent = isSpecials ? `${loadedIssues.length} Special Issues (Pagina ${year})` : `${loadedIssues.length} nummers gevonden`;
 
     listEl.innerHTML = loadedIssues.map(issue => `
       <div class="issue-item">

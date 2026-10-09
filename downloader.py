@@ -22,6 +22,7 @@ BRANDS = {
     "classic-toy-trains": "ctt",
     "garden-railways":    "grw",
     "finescale-modeler":  "fsm",
+    "specials":           "specials",
 }
 
 MONTHS_EN = [
@@ -265,6 +266,67 @@ def get_issues_for_year(page: Page, brand: str, year: int) -> list[dict]:
     }}""")
     print(f"   {len(issues)} issues gevonden voor {brand} {year}")
     return issues
+
+
+def get_special_issues(page: Page, page_num: int = 1, all_pages: bool = False) -> list[dict]:
+    """
+    Haal Special Issues op van https://www.trains.com/archives/special-issues/
+    Ondersteunt:
+      - specifieke pagina (bijv. page_num=1..8)
+      - alle pagina's als all_pages=True
+    """
+    if all_pages:
+        pages_to_scan = list(range(1, 9))
+    else:
+        pages_to_scan = [page_num]
+
+    all_results = []
+    seen = set()
+
+    for p in pages_to_scan:
+        url = f"https://www.trains.com/archives/special-issues/page/{p}/" if p > 1 else "https://www.trains.com/archives/special-issues/"
+        print(f"[Special Issues] Pagina {p}: {url}")
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(1000)
+            nuke_popups(page)
+
+            page_items = page.evaluate("""() => {
+                const list = [];
+                const cards = document.querySelectorAll('.tagged-grid-card, article');
+                for (const c of cards) {
+                    const a = c.querySelector('a');
+                    if (!a || !a.href || !a.href.includes('/special-issues/')) continue;
+                    const titleEl = c.querySelector('h2, h3, h4, .tagged-grid-card__title') || a;
+                    let title = titleEl ? titleEl.innerText.trim() : '';
+                    const parts = a.href.split('/').filter(Boolean);
+                    let slug = parts[parts.length - 1];
+                    if (slug === 'clone-me-special-issue-article-template') {
+                        slug = 'big-boy';
+                    }
+                    list.push({ title: title || slug, slug: slug, href: a.href });
+                }
+                return list;
+            }""")
+
+            for item in page_items:
+                href = item["href"]
+                if href in seen:
+                    continue
+                seen.add(href)
+                all_results.append({
+                    "number": len(all_results) + 1,
+                    "title": item["title"],
+                    "slug": item["slug"],
+                    "href": href,
+                    "page": p,
+                })
+
+        except Exception as e:
+            print(f"   ❌ Fout bij scannen van Special Issues pagina {p}: {e}")
+
+    print(f"   Totaal {len(all_results)} Special Issues gevonden.")
+    return all_results
 
 
 def download_issue_via_viewer(page: Page, issue_url: str, output_dir: Path, progress_cb=None) -> Path | None:

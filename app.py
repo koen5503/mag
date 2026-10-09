@@ -10,7 +10,7 @@ from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file
 
 from downloader import (
-    login, get_issues_for_year, download_issue,
+    login, get_issues_for_year, get_special_issues, download_issue,
     create_browser, is_logged_in, BRANDS, MONTHS_EN, SESSION_FILE
 )
 
@@ -148,48 +148,90 @@ def run_downloads(brand, year_from, year_to, selected_slugs=None, selected_numbe
             log("❌ Login kon niet worden bevestigd!")
             return
 
-        for year in range(year_from, year_to + 1):
-            log(f"\n📅 Jaar {year} — {brand.upper()}")
-            issues = get_issues_for_year(page, brand, year)
-
-            if not issues:
-                log(f"   ⚠️  Geen nummers gevonden voor {brand.upper()} {year}")
-                continue
-
-            # Filteren indien specifieke nummers of slugs zijn gekozen
-            to_download = issues
-            if selected_slugs:
-                to_download = [i for i in issues if i['slug'] in selected_slugs]
-            elif selected_numbers:
-                nums_set = {str(n) for n in selected_numbers}
-                to_download = [i for i in issues if str(i['number']) in nums_set]
-
-            log(f"   {len(to_download)} van de {len(issues)} nummers te downloaden voor {year}")
-
-            for idx, issue in enumerate(to_download):
-                output_dir = base_dir / brand / str(year)
-                slug = issue['slug']
-                target_file = output_dir / f"{slug}.pdf"
-
-                # Direct overslaan als het bestand al lokaal aanwezig is
-                if target_file.exists() and target_file.stat().st_size > 1024 * 1024:
-                    size_mb = target_file.stat().st_size / 1024 / 1024
-                    log(f"   ⏭️  [#{issue['number']}] Al aanwezig: {target_file.name} ({size_mb:.1f} MB)")
-                    _status["done"].append(str(target_file))
+        if brand == "specials":
+            for page_num in range(year_from, year_to + 1):
+                log(f"\n📑 Special Issues — Pagina {page_num}")
+                issues = get_special_issues(page, page_num=page_num)
+                if not issues:
+                    log(f"   ⚠️  Geen Special Issues gevonden op pagina {page_num}")
                     continue
 
-                log(f"⬇️  [#{issue['number']} van {len(issues)}] {issue['title']}...")
-                result = download_issue(
-                    page, issue['href'], output_dir,
-                    progress_cb=lambda msg: log(f"      {msg}")
-                )
-                if result:
-                    _status["done"].append(str(result))
-                    size_mb = result.stat().st_size / 1024 / 1024
-                    log(f"   ✅ Voltooid: {result.name} ({size_mb:.1f} MB)")
-                else:
-                    _status["errors"].append(issue['href'])
-                    log(f"   ❌ Kon niet downloaden: {issue['title']}")
+                to_download = issues
+                if selected_slugs:
+                    to_download = [i for i in issues if i['slug'] in selected_slugs]
+                elif selected_numbers:
+                    nums_set = {str(n) for n in selected_numbers}
+                    to_download = [i for i in issues if str(i['number']) in nums_set]
+
+                log(f"   {len(to_download)} van de {len(issues)} nummers te downloaden van pagina {page_num}")
+
+                for idx, issue in enumerate(to_download):
+                    output_dir = base_dir / "specials"
+                    slug = issue['slug']
+                    target_file = output_dir / f"{slug}.pdf"
+
+                    # Direct overslaan als het bestand al lokaal aanwezig is
+                    if target_file.exists() and target_file.stat().st_size > 1024 * 1024:
+                        size_mb = target_file.stat().st_size / 1024 / 1024
+                        log(f"   ⏭️  [#{issue['number']}] Al aanwezig: {target_file.name} ({size_mb:.1f} MB)")
+                        _status["done"].append(str(target_file))
+                        continue
+
+                    log(f"⬇️  [#{issue['number']} van {len(issues)}] {issue['title']}...")
+                    result = download_issue(
+                        page, issue['href'], output_dir,
+                        progress_cb=lambda msg: log(f"      {msg}")
+                    )
+                    if result:
+                        _status["done"].append(str(result))
+                        size_mb = result.stat().st_size / 1024 / 1024
+                        log(f"   ✅ Voltooid: {result.name} ({size_mb:.1f} MB)")
+                    else:
+                        _status["errors"].append(issue['href'])
+                        log(f"   ❌ Kon niet downloaden: {issue['title']}")
+        else:
+            for year in range(year_from, year_to + 1):
+                log(f"\n📅 Jaar {year} — {brand.upper()}")
+                issues = get_issues_for_year(page, brand, year)
+
+                if not issues:
+                    log(f"   ⚠️  Geen nummers gevonden voor {brand.upper()} {year}")
+                    continue
+
+                # Filteren indien specifieke nummers of slugs zijn gekozen
+                to_download = issues
+                if selected_slugs:
+                    to_download = [i for i in issues if i['slug'] in selected_slugs]
+                elif selected_numbers:
+                    nums_set = {str(n) for n in selected_numbers}
+                    to_download = [i for i in issues if str(i['number']) in nums_set]
+
+                log(f"   {len(to_download)} van de {len(issues)} nummers te downloaden voor {year}")
+
+                for idx, issue in enumerate(to_download):
+                    output_dir = base_dir / brand / str(year)
+                    slug = issue['slug']
+                    target_file = output_dir / f"{slug}.pdf"
+
+                    # Direct overslaan als het bestand al lokaal aanwezig is
+                    if target_file.exists() and target_file.stat().st_size > 1024 * 1024:
+                        size_mb = target_file.stat().st_size / 1024 / 1024
+                        log(f"   ⏭️  [#{issue['number']}] Al aanwezig: {target_file.name} ({size_mb:.1f} MB)")
+                        _status["done"].append(str(target_file))
+                        continue
+
+                    log(f"⬇️  [#{issue['number']} van {len(issues)}] {issue['title']}...")
+                    result = download_issue(
+                        page, issue['href'], output_dir,
+                        progress_cb=lambda msg: log(f"      {msg}")
+                    )
+                    if result:
+                        _status["done"].append(str(result))
+                        size_mb = result.stat().st_size / 1024 / 1024
+                        log(f"   ✅ Voltooid: {result.name} ({size_mb:.1f} MB)")
+                    else:
+                        _status["errors"].append(issue['href'])
+                        log(f"   ❌ Kon niet downloaden: {issue['title']}")
 
         log(f"\n🎉 Klaar! Totaal: {len(_status['done'])} verwerkt, {len(_status['errors'])} fouten.")
 
@@ -396,11 +438,16 @@ def get_issues_api():
 
     # Standaard Trains.com
     brand = request.args.get("brand", "trn")
-    p = browser = context = page = None
     try:
         p, browser, context, page = create_browser(headless=True)
-        issues = get_issues_for_year(page, brand, year)
-        return jsonify({"ok": True, "brand": brand, "year": year, "issues": issues, "count": len(issues)})
+        if brand == "specials":
+            all_pages = (request.args.get("all_pages") == "true" or year == 0)
+            page_num = max(1, min(8, year))
+            issues = get_special_issues(page, page_num=page_num, all_pages=all_pages)
+            return jsonify({"ok": True, "brand": brand, "year": year, "page": page_num, "issues": issues, "count": len(issues)})
+        else:
+            issues = get_issues_for_year(page, brand, year)
+            return jsonify({"ok": True, "brand": brand, "year": year, "issues": issues, "count": len(issues)})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e), "issues": [], "count": 0}), 500
     finally:
