@@ -9,12 +9,14 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #121420; color: #e0e0e0; min-height: 100vh; }
   .header { background: linear-gradient(135deg, #b71c1c, #d32f2f); padding: 18px 28px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: background 0.3s; }
   .header.elektor { background: linear-gradient(135deg, #1565c0, #1976d2); }
+  .header.archive { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
   .header h1 { font-size: 1.5rem; font-weight: 700; color: white; }
   .header .icon { font-size: 2rem; }
   .container { max-width: 1180px; margin: 0 auto; padding: 26px 18px; display: grid; grid-template-columns: 440px 1fr; gap: 24px; }
   .card { background: #1b1e32; border-radius: 12px; padding: 22px; border: 1px solid #282c47; box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
   .card h2 { font-size: 1.05rem; font-weight: 600; color: #ef5350; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
   .card h2.elektor-title { color: #64b5f6; }
+  .card h2.archive-title { color: #81c784; }
   label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px; margin-top: 14px; }
   select, input[type=text], input[type=email], input[type=password], input[type=number] { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #e0e0e0; font-size: 0.95rem; outline: none; }
   select:focus, input:focus { border-color: #ef5350; }
@@ -23,6 +25,7 @@
   .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #2c3252; background: #242944; color: #bbb; font-size: 0.86rem; cursor: pointer; text-align: center; transition: all 0.2s; }
   .tab-btn.active { background: #d32f2f; border-color: #d32f2f; color: white; font-weight: 700; }
   .tab-btn.active-elektor { background: #1976d2; border-color: #1976d2; color: white; font-weight: 700; }
+  .tab-btn.active-archive { background: #2e7d32; border-color: #2e7d32; color: white; font-weight: 700; }
 
   .issues-container { margin-top: 14px; border: 1px solid #2c3252; border-radius: 8px; background: #17192b; padding: 12px; max-height: 250px; overflow-y: auto; }
   .issues-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.8rem; color: #888; }
@@ -40,6 +43,9 @@
   .btn-start:disabled { background: #444; cursor: not-allowed; }
   .btn-blue { background: #1976d2; color: white; }
   .btn-blue:hover { background: #1565c0; }
+  .btn-green { background: #2e7d32; color: white; }
+  .btn-green:hover { background: #1b5e20; }
+  .btn-green:disabled { background: #444; cursor: not-allowed; }
   .btn-fetch { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #3d4570; background: #2c3252; color: #ddd; font-size: 0.85rem; cursor: pointer; margin-top: 8px; }
   .btn-fetch:hover { background: #3d4570; }
 
@@ -80,7 +86,9 @@
       <div class="mode-tabs">
         <div class="tab-btn active" id="tabSiteTrains" onclick="switchSite('trains')">🚂 Trains.com</div>
         <div class="tab-btn" id="tabSiteElektor" onclick="switchSite('elektor')">⚡ Elektor Magazine</div>
+        <div class="tab-btn" id="tabSiteArchive" onclick="switchSite('archive')">🏛️ Internet Archive</div>
       </div>
+
 
       <!-- ==================== SECTIE: TRAINS.COM ==================== -->
       <div id="sectionTrains">
@@ -232,6 +240,47 @@
         <button class="btn btn-blue" id="startElektorBtn" onclick="startElektorDownload()">▶ Start Elektor Download</button>
       </div>
 
+      <!-- ==================== SECTIE: INTERNET ARCHIVE ==================== -->
+      <div id="sectionArchive" style="display:none;">
+        <h2 class="archive-title">🏛️ Internet Archive Instellingen</h2>
+
+        <label>📁 Lokale downloadmap (Internet Archive)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="archive_download_dir" placeholder="Bijv. /Users/koen/.../ArchiveOrg" style="font-size:0.85rem;">
+          <button class="btn-fetch" style="width:auto; margin:0; white-space:nowrap; padding:0 14px;" onclick="saveDownloadDir('archive')">Opslaan</button>
+        </div>
+        <div id="archiveDirHint" style="font-size:0.75rem; color:#888; margin-top:4px;">Standaard: projectmap/downloads/ArchiveOrg</div>
+
+        <label style="margin-top:16px;">Archive.org URL of Collectie-ID</label>
+        <input type="text" id="archive_url" value="https://archive.org/download/BYTE-MAGAZINE-COMPLETE" placeholder="Bijv. https://archive.org/download/BYTE-MAGAZINE-COMPLETE of BYTE-MAGAZINE-COMPLETE" style="font-size:0.85rem;">
+
+        <button class="btn-fetch" id="btnArchiveInspect" onclick="inspectArchiveUrl()" style="margin-top:8px;">
+          🔍 Bestanden ophalen & Inspecteren
+        </button>
+
+        <div id="archiveItemMeta" style="margin-top:14px; padding:12px 14px; background:#17192b; border:1px solid #2c3252; border-radius:8px; display:none;">
+          <div id="archiveItemTitle" style="font-weight:700; font-size:0.95rem; color:#81c784; margin-bottom:4px;"></div>
+          <div id="archiveItemSummary" style="font-size:0.8rem; color:#aaa;"></div>
+        </div>
+
+        <div class="issues-container" id="archiveFilesBox" style="margin-top:12px; display:none;">
+          <div class="issues-header">
+            <span id="archiveFilesCount">0 PDF's gevonden</span>
+            <span class="issues-actions">
+              <a onclick="selectAllArchive(true)" style="color:#81c784;">Alles</a> |
+              <a onclick="selectAllArchive(false)" style="color:#81c784;">Geen</a>
+            </span>
+          </div>
+          <div id="archiveFilesList" style="color:#777; font-size:0.8rem; text-align:center; padding:15px 0;">
+            Vul een URL in en klik op 'Bestanden ophalen'.
+          </div>
+        </div>
+
+        <button class="btn btn-green" id="startArchiveBtn" onclick="startArchiveDownload()" style="display:none;">
+          ▶ Download alle PDF-bestanden
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -267,18 +316,31 @@ let loadedIssues = [];
 function switchSite(site) {
   currentSite = site;
   const isElektor = (site === 'elektor');
+  const isArchive = (site === 'archive');
+  const isTrains  = (site === 'trains');
 
-  document.getElementById('tabSiteTrains').classList.toggle('active', !isElektor);
+  document.getElementById('tabSiteTrains').classList.toggle('active', isTrains);
   document.getElementById('tabSiteElektor').classList.toggle('active-elektor', isElektor);
+  document.getElementById('tabSiteArchive').classList.toggle('active-archive', isArchive);
 
-  document.getElementById('sectionTrains').style.display = isElektor ? 'none' : 'block';
+  document.getElementById('sectionTrains').style.display = isTrains ? 'block' : 'none';
   document.getElementById('sectionElektor').style.display = isElektor ? 'block' : 'none';
+  document.getElementById('sectionArchive').style.display = isArchive ? 'block' : 'none';
 
   const header = document.getElementById('mainHeader');
   const title = document.getElementById('mainTitle');
   const icon = document.getElementById('mainIcon');
 
-  if (isElektor) {
+  header.classList.remove('elektor', 'archive');
+
+  if (isArchive) {
+    header.classList.add('archive');
+    title.textContent = 'Internet Archive Downloader';
+    icon.textContent = '🏛️';
+    if (!loadedArchiveData) {
+      inspectArchiveUrl();
+    }
+  } else if (isElektor) {
     header.classList.add('elektor');
     title.textContent = 'Elektor Magazine Downloader';
     icon.textContent = '⚡';
@@ -286,12 +348,139 @@ function switchSite(site) {
       fetchElektorIssues();
     }
   } else {
-    header.classList.remove('elektor');
     title.textContent = 'Trains.com Magazine Downloader';
     icon.textContent = '🚂';
   }
   refreshFiles();
 }
+
+let loadedArchiveData = null;
+
+async function inspectArchiveUrl() {
+  const url = document.getElementById('archive_url').value.trim();
+  const btn = document.getElementById('btnArchiveInspect');
+  const metaBox = document.getElementById('archiveItemMeta');
+  const titleEl = document.getElementById('archiveItemTitle');
+  const summaryEl = document.getElementById('archiveItemSummary');
+  const filesBox = document.getElementById('archiveFilesBox');
+  const filesCountEl = document.getElementById('archiveFilesCount');
+  const filesListEl = document.getElementById('archiveFilesList');
+  const startBtn = document.getElementById('startArchiveBtn');
+
+  if (!url) {
+    alert('Vul eerst een Archive.org URL of Identifier in.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Inspecteren van Archive.org...';
+  filesBox.style.display = 'block';
+  filesCountEl.textContent = 'Bezig met scannen...';
+  filesListEl.innerHTML = '<div style="color:#aaa; font-size:0.8rem; text-align:center; padding:15px;">PDF-bestanden ophalen via Archive.org API...</div>';
+
+  try {
+    const res = await fetch('/api/archive/inspect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url: url })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = '🔍 Bestanden ophalen & Inspecteren';
+
+    if (!data.ok || !data.files || data.files.length === 0) {
+      metaBox.style.display = 'none';
+      startBtn.style.display = 'none';
+      filesCountEl.textContent = '0 PDF-bestanden gevonden';
+      filesListEl.innerHTML = `<div style="color:#e57373; font-size:0.8rem; text-align:center; padding:15px;">${data.error || 'Geen PDF-bestanden gevonden voor dit item.'}</div>`;
+      loadedArchiveData = null;
+      return;
+    }
+
+    loadedArchiveData = data;
+    titleEl.textContent = data.title;
+    summaryEl.textContent = `${data.count} PDF-bestanden · Totaal ${data.total_size_gb} GB (${data.total_size_mb} MB) · Collectie-ID: ${data.identifier}`;
+    metaBox.style.display = 'block';
+
+    filesCountEl.textContent = `${data.count} PDF's (${data.total_size_gb} GB)`;
+    startBtn.style.display = 'block';
+    startBtn.textContent = `▶ Download alle ${data.count} PDF-bestanden (${data.total_size_gb} GB)`;
+
+    filesListEl.innerHTML = data.files.map((file, idx) => `
+      <div class="issue-item">
+        <input type="checkbox" class="archive-file-cb" value="${file.name}" checked style="accent-color:#2e7d32;" onchange="updateArchiveSelectedCount()">
+        <span class="issue-num" style="color:#81c784; width:36px;">#${idx + 1}</span>
+        <span class="issue-name" title="${file.name}">${file.name}</span>
+        <span style="font-size:0.75rem; color:#888; white-space:nowrap;">${file.size_mb} MB</span>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔍 Bestanden ophalen & Inspecteren';
+    filesCountEl.textContent = 'Fout bij inspecteren';
+    filesListEl.innerHTML = `<div style="color:#ef5350; font-size:0.8rem; text-align:center; padding:15px;">Fout: ${e.message}</div>`;
+  }
+}
+
+function updateArchiveSelectedCount() {
+  if (!loadedArchiveData) return;
+  const checked = document.querySelectorAll('.archive-file-cb:checked');
+  const startBtn = document.getElementById('startArchiveBtn');
+  if (checked.length === loadedArchiveData.count) {
+    startBtn.textContent = `▶ Download alle ${loadedArchiveData.count} PDF-bestanden (${loadedArchiveData.total_size_gb} GB)`;
+  } else {
+    startBtn.textContent = `▶ Download ${checked.length} geselecteerde PDF's`;
+  }
+}
+
+function selectAllArchive(val) {
+  document.querySelectorAll('.archive-file-cb').forEach(cb => cb.checked = val);
+  updateArchiveSelectedCount();
+}
+
+async function startArchiveDownload() {
+  const btn = document.getElementById('startArchiveBtn');
+  btn.disabled = true;
+
+  if (!loadedArchiveData) {
+    alert('Inspecteer eerst een Archive.org collectie.');
+    btn.disabled = false;
+    return;
+  }
+
+  const selectedFiles = Array.from(document.querySelectorAll('.archive-file-cb:checked')).map(cb => cb.value);
+  if (selectedFiles.length === 0) {
+    alert('Selecteer minstens één PDF om te downloaden.');
+    btn.disabled = false;
+    return;
+  }
+
+  const customDir = document.getElementById('archive_download_dir').value.trim();
+  const payload = {
+    site: 'archive',
+    identifier: loadedArchiveData.identifier,
+    files: selectedFiles,
+    download_dir: customDir
+  };
+
+  try {
+    const resp = await fetch('/api/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      alert(data.msg);
+      btn.disabled = false;
+    }
+  } catch(e) {
+    alert('Fout bij starten: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
 
 let currentElektorMode = 'single';
 let loadedElektorIssues = [];
@@ -481,14 +670,30 @@ async function loadConfig() {
       st.style.color = data.has_elektor_password ? '#2ecc71' : '#bbb';
     }
 
+    // Archive.org
+    if (data.archive_download_dir) {
+      document.getElementById('archive_download_dir').value = data.archive_download_dir;
+      document.getElementById('archiveDirHint').textContent = 'Huidige map: ' + data.archive_download_dir;
+    }
+
   } catch(e) {}
 }
 
 async function saveDownloadDir(site) {
-  const isElektor = (site === 'elektor');
-  const inputId = isElektor ? 'elektor_download_dir' : 'download_dir';
-  const hintId  = isElektor ? 'elektorDirHint' : 'dirHint';
-  const key     = isElektor ? 'elektor_download_dir' : 'download_dir';
+  let inputId, hintId, key;
+  if (site === 'elektor') {
+    inputId = 'elektor_download_dir';
+    hintId  = 'elektorDirHint';
+    key     = 'elektor_download_dir';
+  } else if (site === 'archive') {
+    inputId = 'archive_download_dir';
+    hintId  = 'archiveDirHint';
+    key     = 'archive_download_dir';
+  } else {
+    inputId = 'download_dir';
+    hintId  = 'dirHint';
+    key     = 'download_dir';
+  }
 
   let dir = document.getElementById(inputId).value.trim().replace(/^['"]+|['"]+$/g, '').trim();
   document.getElementById(inputId).value = dir;
@@ -675,6 +880,8 @@ async function poll() {
     document.getElementById('startBtn').disabled = data.running;
     const elektorBtn = document.getElementById('startElektorBtn');
     if (elektorBtn) elektorBtn.disabled = data.running;
+    const archiveBtn = document.getElementById('startArchiveBtn');
+    if (archiveBtn) archiveBtn.disabled = data.running;
     document.getElementById('doneCount').textContent = data.done.length;
     document.getElementById('errCount').textContent = data.errors.length;
 
@@ -696,7 +903,8 @@ async function refreshFiles() {
     const files = await resp2.json();
     const list = document.getElementById('filesList');
     if (files.length === 0) {
-      list.innerHTML = `<div style="color:#666;font-size:0.85rem">Nog geen bestanden gedownload voor ${currentSite === 'elektor' ? 'Elektor' : 'Trains.com'}.</div>`;
+      const siteNames = { elektor: 'Elektor', archive: 'Internet Archive', trains: 'Trains.com' };
+      list.innerHTML = `<div style="color:#666;font-size:0.85rem">Nog geen bestanden gedownload voor ${siteNames[currentSite] || 'deze website'}.</div>`;
     } else {
       list.innerHTML = files.map(f => `
         <div class="file-item">

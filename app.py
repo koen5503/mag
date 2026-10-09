@@ -69,6 +69,7 @@ def get_config() -> dict:
     default = {
         "download_dir": str(Path("/Users/koen/Library/CloudStorage/OneDrive-Personal 2/Archief/Magazines/Trains")),
         "elektor_download_dir": str(Path("/Users/koen/Library/CloudStorage/OneDrive-Personal 2/Archief/Magazines/Elektor")),
+        "archive_download_dir": str(Path("/Users/koen/Library/CloudStorage/OneDrive-Personal 2/Archief/Magazines/ArchiveOrg")),
     }
     if CONFIG_FILE.exists():
         try:
@@ -91,7 +92,12 @@ def set_config_value(key: str, val: str) -> str:
 
 def get_download_dir(site="trains") -> Path:
     cfg = get_config()
-    key = "elektor_download_dir" if site == "elektor" else "download_dir"
+    if site == "elektor":
+        key = "elektor_download_dir"
+    elif site == "archive":
+        key = "archive_download_dir"
+    else:
+        key = "download_dir"
     p = Path(cfg.get(key, DEFAULT_DL_DIR)).expanduser().resolve()
     p.mkdir(parents=True, exist_ok=True)
     return p
@@ -287,6 +293,72 @@ def run_elektor_downloads(year_from, year_to, selected_slugs=None, selected_numb
         _status["running"] = False
 
 
+def run_archive_downloads(identifier: str, selected_file_names: list = None, custom_dir=None):
+    global _status
+    _status["running"] = True
+    _status["log"] = []
+    _status["done"] = []
+    _status["errors"] = []
+
+    if custom_dir:
+        base_dir = set_config_value("archive_download_dir", custom_dir)
+        base_dir = Path(base_dir)
+    else:
+        base_dir = get_download_dir("archive")
+    log(f"📁 Downloadlocatie (Archive.org): {base_dir}")
+
+    from archive_downloader import inspect_archive_item, download_archive_file
+
+    try:
+        log(f"[Archive.org] Collectie '{identifier}' inspecteren...")
+        info = inspect_archive_item(identifier)
+        if not info.get("ok"):
+            log(f"❌ Fout bij inspecteren van Archive.org item: {info.get('error')}")
+            return
+
+        all_files = info.get("files", [])
+        title = info.get("title", identifier)
+        log(f"📖 Collectie: {title} ({len(all_files)} PDF's gevonden)")
+
+        if selected_file_names:
+            names_set = set(selected_file_names)
+            to_download = [f for f in all_files if f["name"] in names_set]
+        else:
+            to_download = all_files
+
+        log(f"⬇️  {len(to_download)} van de {len(all_files)} bestanden te downloaden...")
+        item_dir = base_dir / identifier
+
+        for idx, f_info in enumerate(to_download, 1):
+            fname = f_info["name"]
+            furl = f_info["url"]
+            fsize = f_info["size_bytes"]
+            target_path = item_dir / fname
+
+            log(f"\n[{idx}/{len(to_download)}] {fname} ({f_info['size_mb']} MB)")
+            result = download_archive_file(
+                url=furl,
+                output_path=target_path,
+                expected_size=fsize,
+                progress_cb=lambda msg: log(f"   {msg}")
+            )
+
+            if result:
+                _status["done"].append(str(result))
+            else:
+                _status["errors"].append(fname)
+                log(f"   ❌ Mislukt: {fname}")
+
+        log(f"\n🎉 Klaar! Totaal: {len(_status['done'])} verwerkt, {len(_status['errors'])} fouten.")
+
+    except Exception as e:
+        log(f"❌ Onverwachte fout: {e}")
+        import traceback
+        log(traceback.format_exc())
+    finally:
+        _status["running"] = False
+
+
 @app.route("/")
 def index():
     return render_template("index.html", brands=BRANDS)
@@ -352,6 +424,9 @@ def config_route():
         if "elektor_download_dir" in data and data["elektor_download_dir"]:
             resp["elektor_download_dir"] = set_config_value("elektor_download_dir", data["elektor_download_dir"])
 
+        if "archive_download_dir" in data and data["archive_download_dir"]:
+            resp["archive_download_dir"] = set_config_value("archive_download_dir", data["archive_download_dir"])
+
         if "email" in data or "password" in data:
             set_credentials(data.get("email", ""), data.get("password", ""), prefix="TRAINS")
             resp["email"] = os.getenv("TRAINS_EMAIL", "")
@@ -369,11 +444,27 @@ def config_route():
     return jsonify({
         "download_dir": cfg["download_dir"],
         "elektor_download_dir": cfg["elektor_download_dir"],
+        "archive_download_dir": cfg.get("archive_download_dir", ""),
         "email": t_email,
         "has_password": bool(t_pwd),
         "elektor_email": e_email,
         "has_elektor_password": bool(e_pwd)
     })
+
+
+@app.route("/api/archive/inspect", methods=["POST"])
+def archive_inspect_api():
+    data = request.json or {}
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"ok": False, "error": "Geen URL of identifier ingevoerd."}), 400
+
+    from archive_downloader import inspect_archive_item
+    try:
+        info = inspect_archive_item(url)
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/elektor/test_login", methods=["POST"])
@@ -433,6 +524,14 @@ def start():
             args=(year_from, year_to, selected_slugs, selected_numbers, custom_dir),
             daemon=True
         )
+    elif site == "archive":
+        identifier = data.get("identifier", "").strip()
+        selected_files = data.get("files", [])
+        t = threading.Thread(
+            target=run_archive_downloads,
+            args=(identifier, selected_files, custom_dir),
+            daemon=True
+        )
     else:
         t = threading.Thread(
             target=run_downloads,
@@ -479,9 +578,11 @@ def download_file(rel_path):
     path = current_dir / rel_path
     if not path.exists():
         # Kijk in alternatieve dirs
-        alt_site = "elektor" if site == "trains" else "trains"
-        alt_dir = get_download_dir(alt_site)
-        path = alt_dir / rel_path
+        for alt_site in ["trains", "elektor", "archive"]:
+            alt_dir = get_download_dir(alt_site)
+            if (alt_dir / rel_path).exists():
+                path = alt_dir / rel_path
+                break
     if not path.exists():
         path = DEFAULT_DL_DIR / rel_path
     if not path.exists():
